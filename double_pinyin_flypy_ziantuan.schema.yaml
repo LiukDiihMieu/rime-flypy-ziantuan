@@ -1,0 +1,218 @@
+# Rime schema
+# encoding: utf-8
+
+schema:
+  schema_id: double_pinyin_flypy_ziantuan
+  name: 小鶴雙拼-尖團音
+  version: "0.1"
+  author:
+    - double pinyin layout by 鶴
+    - Rime schema by 佛振 <chen.sst@gmail.com>
+    - Ziantuan adaption by 陸地貓 <liukdiihmieu@gmail.com>
+  description: |
+    區分尖團的小鶴雙拼方案。使用雪齋的區分尖團字典，但不支持m韻尾。
+  dependencies:
+    - stroke
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中文, 西文 ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: simplification
+    states: [ 漢字, 汉字 ]
+  - name: ascii_punct
+    states: [ 。，, ．， ]
+
+engine:
+  processors:
+    - ascii_composer
+    - recognizer
+    - key_binder
+    - speller
+    - punctuator
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor
+    - punct_segmentor
+    - fallback_segmentor
+  translators:
+    - punct_translator
+    - reverse_lookup_translator
+    - script_translator
+  filters:
+    - simplifier
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    - erase/^xx$/  # 刪除沒有拼音的字
+    
+    # 分尖團字典中全部用v記錄ü，因此模糊音應該反過來設置。
+    #- derive/^([jqxy])u$/$1v/  # ju等替換爲jv
+    - derive/^yv$/yu/  # 模糊音只處理yu，其他稍後處理
+    # 本方案不支持m韻尾，還原。
+    - xform/([aeiu])m$/$1n/
+    # 字典中統一爲fong等，但此方案兼容feng
+    - derive/([bpmfw])ong/$1eng/
+    
+    # 不再保留兩鍵零聲母兼容性，避免歧義，和ang等相同處理方法。
+    # - derive/^([aoe])([ioun])$/$1$1$2/  # 兩鍵洪音零聲母ao等重複爲aao，同時保留了ao也可打出的規則。
+    - xform/^([aoe])([ioun])$/$1$1$2/
+    # Todo：沒有歧義的ao，ou兩組，如需要可以保留兼容。
+    
+    - xform/^([aoe])(ng)?$/$1$1$2/  # 單鍵a和三鍵ang等重複爲aa和aang，之後會被xform進一步替換。
+    
+    # 提前調整ii音節方便後續處理。
+    - xform/^zii$/ZI/
+    - xform/^cii$/CI/
+    - xform/^sii$/SI/
+    - xform/ii$/i/  # 其他情況zhi, ri等兼容原有方案
+    # er音節會和cüan衝突，無奈只能調整爲一個閒置音節ea。
+    - xform/^er$/ea/
+    
+    # 尖音賦予新按鍵。
+    - xform/^z([iv])/O$1/
+    - xform/^c([iv])/E$1/
+    - xform/^s([iv])/A$1/
+    # 團音仍使用jqx打出。
+    - xform/^g([iv])/J$1/
+    - xform/^k([iv])/Q$1/
+    - xform/^h([iv])/X$1/
+    # 兼容團音模糊打法ju
+    - derive/^([JQX])v$/$1u/
+    # 尖音類似可支持u的打法（啓用此功能會佔用ou的兼容打法）
+    - derive/^([OEA])v$/$1u/
+    
+    - xform/iu$/Q/
+    - xform/(.)ei$/$1W/  # 非零聲母ei替換
+    - xform/[uv]an$/R/  # 尖團字典有van，加入
+    - xform/ve$/T/  # 尖團字典只有ve，移除ue
+    - xform/[uv]n$/Y/  # 加入vn
+    - xform/^sh/U/
+    - xform/^ch/I/
+    - xform/^zh/V/
+    - xform/uo$/O/
+    - xform/ie$/P/
+    - xform/i?ong$/S/  # iong和ong都是S
+    - xform/ing$|uai$/K/
+    - xform/(.)ai$/$1D/  # 非零聲母ai
+    - xform/(.)en$/$1F/  # 非零聲母en
+    - xform/(.)eng$/$1G/  # 非零聲母eng
+    - xform/[iu]ang$/L/  # iang和uang都是L
+    - xform/(.)ang$/$1H/  # 非零聲母ang
+    - xform/ian$/M/
+    - xform/(.)an$/$1J/  # 非零聲母an
+    - xform/(.)ou$/$1Z/  # 非零聲母ou
+    - xform/[iu]a$/X/  # ia和ua都是X
+    - xform/iao$/N/
+    - xform/(.)ao$/$1C/  # 非零聲母，無介音的情況（iao在上一條已處理）
+    - xform/ui$/V/
+    - xform/in$/B/
+    - xlit/QWRTYUIOPSDFGHJKLZXCVBNMAOE/qwrtyuiopsdfghjklzxcvbnmaoe/  # AOE爲新增
+    #- abbrev/^(.).+$/$1/
+
+translator:
+  dictionary: luna_pinyin_ziam_tuan.extended
+  prism: double_pinyin_flypy_ziantuan
+  preedit_format:
+  
+    # 先處理ï
+    - xform/([zcsrv])i/$1ï/
+    - "xform/(^|[ '])([ui])i/$1$2ï/"
+    
+    # - xform/([bpmfdtnljqx])n/$1iao/
+    - xform/([bpmfdtnljqxaoe])n/$1iao/  # 加入尖音聲母
+    - xform/(\w)g/$1eng/
+    - xform/(\w)q/$1iu/
+    - xform/(\w)w/$1ei/
+    
+    # - xform/([dtnlgkhjqxyvuirzcs])r/$1uan/
+    - xform/([dtnlgkhyvuirzcs])r/$1uan/
+    - xform/([jqxaoe])r/$1van/
+    
+    - xform/(\w)t/$1ve/
+    
+    # - xform/(\w)y/$1un/
+    - xform/([dtnlgkhvuirzcs])y/$1un/
+    - xform/([jqxaoey])y/$1vn/
+    
+    - xform/([dtnlgkhvuirzcs])o/$1uo/
+    - xform/(\w)p/$1ie/
+    - xform/([jqx])s/$1iong/
+    - xform/(\w)s/$1ong/
+    - xform/(\w)d/$1ai/
+    - xform/(\w)f/$1en/
+    - xform/(\w)h/$1ang/
+    - xform/(\w)j/$1an/
+    - xform/([gkhvuirzcs])k/$1uai/
+    - xform/(\w)k/$1ing/
+    
+    # - xform/([jqxnl])l/$1iang/
+    - xform/([jqxnlaoe])l/$1iang/
+    - xform/(\w)l/$1uang/
+    - xform/(\w)z/$1ou/
+    - xform/([gkhvuirzcs])x/$1ua/
+    - xform/(\w)x/$1ia/
+    - xform/(\w)c/$1ao/
+    - xform/([dtgkhvuirzcs])v/$1ui/
+    - xform/(\w)b/$1in/
+    - xform/(\w)m/$1ian/
+    
+    # 新的尖團聲母
+    - "xform/(^|[ '])au/$1sv/"  # 處理尖音模糊拼法
+    - "xform/(^|[ '])eu/$1cv/"
+    - "xform/(^|[ '])ou/$1zv/"
+    
+    - "xform/(^|[ '])a([iv])/$1s$2/"  # 限定iv，防止和零聲母規則衝突
+    - "xform/(^|[ '])e([iv])/$1c$2/"
+    - "xform/(^|[ '])o([iv])/$1z$2/"
+    
+    - "xform/(^|[ '])ju/$1gv/"  # 處理團音模糊拼法
+    - "xform/(^|[ '])qu/$1kv/"
+    - "xform/(^|[ '])xu/$1hv/"
+    - "xform/(^|[ '])yu/$1yv/"
+    
+    - "xform/(^|[ '])j/$1g/"
+    - "xform/(^|[ '])q/$1k/"
+    - "xform/(^|[ '])x/$1h/"
+    
+    - xform/([aoe])\1(\w)/$1$2/
+    - "xform/(^|[ '])v/$1zh/"
+    - "xform/(^|[ '])i/$1ch/"
+    - "xform/(^|[ '])u/$1sh/"
+    
+    # - xform/([jqxy])v/$1u/
+    # - xform/([nl])v/$1ü/
+
+    - xform/v/ü/  # 已區分尖團，v始終顯示爲ü
+    - "xform/(^|[ '])eu/$1er/"
+
+reverse_lookup:
+  dictionary: stroke
+  enable_completion: true
+  prefix: "`"
+  suffix: "'"
+  tips: 〔筆畫〕
+  preedit_format:
+    - xlit/hspnz/一丨丿丶乙/
+  comment_format:
+    - xform/([nl])v/$1ü/
+
+punctuator:
+  import_preset: default
+
+key_binder:
+  import_preset: default
+
+recognizer:
+  import_preset: default
+  patterns:
+    reverse_lookup: "`[a-z]*'?$"
