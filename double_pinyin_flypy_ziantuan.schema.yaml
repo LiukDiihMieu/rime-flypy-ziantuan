@@ -59,7 +59,7 @@ speller:
     #- derive/^([jqxy])u$/$1v/  # ju等替換爲jv
     - derive/^yv$/yu/  # 模糊音只處理yu，其他稍後處理
     # 本方案不支持m韻尾，還原。
-    - xform/([aeiu])m$/$1n/
+    - xform/([aeiuv])m$/$1n/
     # 字典中統一爲fong等，但此方案兼容feng
     - derive/([bpmfw])ong/$1eng/
     
